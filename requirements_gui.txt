@@ -1,0 +1,14 @@
+
+# GUI Requirements for Doctors Note Upscaler
+# Install these packages for the PyQt6 GUI version
+
+# Core GUI framework
+PyQt6>=6.4.0
+
+# Existing dependencies (if not already installed)
+opencv-python>=4.7.0
+pytesseract>=0.3.10
+Pillow>=9.0.0
+
+# Optional: For better styling and icons
+# qtawesome>=1.2.0  # For icons (uncomment if needed)
