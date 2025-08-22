@@ -93,15 +93,16 @@ MEDICAL_ABBREVIATIONS = {
     'elix': 'elixir',
 }
 
+
 # ===== ENHANCED OCR ERROR PATTERNS =====
 OCR_ERROR_PATTERNS = {
     # Common character misreadings
     r'\b([0-9]+)O([0-9]+)\b': r'\1\2',  # "1O5" -> "105"
     r'\b([0-9]+)o([0-9]+)\b': r'\1\2',  # "1o5" -> "15"
-    r'\bl([0-9]+)\b': r'1\2',           # "l5" -> "15"
-    r'\bI([0-9]+)\b': r'1\2',           # "I5" -> "15"
-    r'\b([0-9]+)l\b': r'\g<1>1',        # "5l" -> "51"
-    r'\b([0-9]+)I\b': r'\g<1>1',        # "5I" -> "51"
+    r'\bl([0-9]+)\b': r'1\2',           # FIXED: "l5" -> "15"
+    r'\bI([0-9]+)\b': r'1\2',           # FIXED: "I5" -> "15"
+    r'\b([0-9]+)l\b': r'\11',           # FIXED: "5l" -> "51"
+    r'\b([0-9]+)I\b': r'\11',           # FIXED: "5I" -> "51"
     
     # Fix common medication name OCR errors
     r'\bAsplrln\b': 'Aspirin',
@@ -358,29 +359,26 @@ def fix_ocr_errors(text, aggressive=False):
     """
     # Apply standard OCR error patterns
     for pattern, replacement in OCR_ERROR_PATTERNS.items():
-        text = re.sub(pattern, replacement, text)
+        try:
+            text = re.sub(pattern, replacement, text)
+        except re.error as e:
+            print(f"Regex error with pattern {pattern}: {e}")
+            continue
     
     if aggressive:
-        # More aggressive corrections for very unclear text
-        aggressive_patterns = {
-            # Try to fix severely garbled medication names
-            r'\b[A-Z]{2,}[a-z]{2,}[A-Z]{2,}\b': lambda m: suggest_medication_name(m.group()),
-            
-            # Fix obvious number-letter confusions in dosages
-            r'\b(\d+)[Oo](\d+)\b': r'\1\2',  # "1O5" or "1o5" -> "15"
-            r'\b[Il](\d+)\b': r'1\2',        # "I5" or "l5" -> "15"
+        # More aggressive corrections for very unclear text - simplified approach
+        try:
+            # Fix number-letter confusions
+            text = re.sub(r'\b(\d+)[Oo](\d+)\b', r'\1\2', text)  # "1O5" -> "15"
+            text = re.sub(r'\b[Il](\d+)\b', r'1\1', text)        # "I5" -> "15"
             
             # Clean up excessive punctuation
-            r'[.]{3,}': '...',
-            r'[!]{2,}': '!',
-            r'[?]{2,}': '?',
-        }
-        
-        for pattern, replacement in aggressive_patterns.items():
-            if callable(replacement):
-                text = re.sub(pattern, replacement, text)
-            else:
-                text = re.sub(pattern, replacement, text)
+            text = re.sub(r'[.]{3,}', '...', text)
+            text = re.sub(r'[!]{2,}', '!', text)
+            text = re.sub(r'[?]{2,}', '?', text)
+            
+        except re.error as e:
+            print(f"Regex error in aggressive mode: {e}")
     
     return text
 
